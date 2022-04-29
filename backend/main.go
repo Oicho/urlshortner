@@ -1,33 +1,32 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
+	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 )
 
-type redirect struct {
-	ID  string `json:"ID"`
+type redirectReceived struct {
 	Url string `json:"Url"`
+	Hit uint   `json:"Hit"`
+}
+
+type redirect struct {
+	Url string `json:"Url"`
+	Hit uint   `json:"Hit"`
 }
 
 type allRedirects []redirect
 
-var redirects = allRedirects{
-	{
-		ID:  "1",
-		Url: "https://perdu.com",
-	},
-	{
-		ID:  "2",
-		Url: "https://www.lttstore.com/",
-	},
-}
+var ctx = context.Background()
 
+/*
 func redirectFromID(w http.ResponseWriter, r *http.Request) {
 	urlID := mux.Vars(r)["id"]
 	for _, v := range redirects {
@@ -40,16 +39,27 @@ func redirectFromID(w http.ResponseWriter, r *http.Request) {
 	// No match
 
 }
-
+*/
 func addRedirect(w http.ResponseWriter, r *http.Request) {
-	var newRedirect redirect
+	var receivedJson redirectReceived
 	requestBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
 	}
+	json.Unmarshal(requestBody, &receivedJson)
 
-	json.Unmarshal(requestBody, &newRedirect)
-	redirects = append(redirects, newRedirect)
+	newRedirect := redirect{receivedJson.Url, 0}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	ret := rdb.Set("4", newRedirect, 0)
+	err = ret.Err()
+	if err != nil {
+		panic(err)
+	}
 	w.WriteHeader(http.StatusCreated)
 
 	json.NewEncoder(w).Encode(newRedirect)
@@ -57,7 +67,8 @@ func addRedirect(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/{id}", redirectFromID).Methods("GET")
+
+	//router.HandleFunc("/{id}", redirectFromID).Methods("GET")
 	router.HandleFunc("/url/", addRedirect).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
