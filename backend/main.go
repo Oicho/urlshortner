@@ -13,6 +13,13 @@ import (
 	"github.com/rs/xid"
 )
 
+var rdb = redis.NewClient(&redis.Options{
+	PoolSize: 60,
+	Addr:     "localhost:6379",
+	Password: "", // no password set
+	DB:       0,  // use default DB
+})
+
 type RedirectReceived struct {
 	Url string `json:"Url"`
 }
@@ -28,11 +35,6 @@ var ctx = context.Background()
 func redirectFromID(w http.ResponseWriter, r *http.Request) {
 	var redirect Redirect
 	urlID := mux.Vars(r)["id"]
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
 
 	status := rdb.Get(urlID)
 	err := status.Err()
@@ -59,11 +61,6 @@ func redirectFromID(w http.ResponseWriter, r *http.Request) {
 
 func getRedirect(w http.ResponseWriter, r *http.Request) {
 	urlID := mux.Vars(r)["id"]
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
 
 	status := rdb.Get(urlID)
 	err := status.Err()
@@ -83,11 +80,6 @@ func addRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 	json.Unmarshal(requestBody, &receivedJson)
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
 	/* This should be:
 	a) a bijective function https://stackoverflow.com/questions/742013/how-do-i-create-a-url-shortener
 	b) checked for duplicate key
