@@ -45,9 +45,6 @@ func redirectFromID(w http.ResponseWriter, r *http.Request) {
 
 	json.Unmarshal([]byte(status.Val()), &redirect)
 
-	if err != nil {
-		panic(err)
-	}
 	redirect.Hit += 1
 	jsonOut, err := json.Marshal(redirect)
 	if err != nil {
@@ -78,8 +75,10 @@ func addRedirect(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
 	}
-	json.Unmarshal(requestBody, &receivedJson)
-
+	err = json.Unmarshal(requestBody, &receivedJson)
+	if err != nil || receivedJson.Url == "" {
+		panic(err)
+	}
 	/* This should be:
 	a) a bijective function https://stackoverflow.com/questions/742013/how-do-i-create-a-url-shortener
 	b) checked for duplicate key
@@ -92,7 +91,7 @@ func addRedirect(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if rdb.Set(key, jsonOut, 0).Err() != nil {
+	if err := rdb.Set(key, jsonOut, 0).Err(); err != nil {
 		panic(err)
 	}
 	w.WriteHeader(http.StatusCreated)
