@@ -69,6 +69,7 @@ func getRedirect(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(status.Val()))
 }
+
 func addRedirect(w http.ResponseWriter, r *http.Request) {
 	var receivedJson RedirectReceived
 	requestBody, err := ioutil.ReadAll(r.Body)
